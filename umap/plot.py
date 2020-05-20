@@ -40,11 +40,18 @@ import sklearn.neighbors
 from matplotlib.patches import Patch
 
 from umap.nndescent import initialise_search, initialized_nnd_search
-from umap.utils import deheap_sort, submatrix
+from umap.utils import deheap_sort, submatrix, fast_knn_indices
 
 from bokeh.plotting import show as show_interactive
 from bokeh.layouts import column
-from bokeh.models import CustomJS, TextInput
+from bokeh.models import CustomJS
+from bokeh.models import TextInput
+from bokeh.models import ColumnDataSource
+from bokeh.models import TapTool
+from bokeh.models import HoverTool
+from bokeh import events
+from bokeh.models import Button
+
 from matplotlib.pyplot import show as show_static
 
 from warnings import warn
@@ -252,19 +259,18 @@ def _select_font_color(background):
 
 
 def _datashade_points(
-    points,
-    ax=None,
-    labels=None,
-    values=None,
-    cmap="Blues",
-    color_key=None,
-    color_key_cmap="Spectral",
-    background="white",
-    width=800,
-    height=800,
-    show_legend=True,
+        points,
+        ax=None,
+        labels=None,
+        values=None,
+        cmap="Blues",
+        color_key=None,
+        color_key_cmap="Spectral",
+        background="white",
+        width=800,
+        height=800,
+        show_legend=True,
 ):
-
     """Use datashader to plot points"""
     extent = _get_extent(points)
     canvas = ds.Canvas(
@@ -354,17 +360,17 @@ def _datashade_points(
 
 
 def _matplotlib_points(
-    points,
-    ax=None,
-    labels=None,
-    values=None,
-    cmap="Blues",
-    color_key=None,
-    color_key_cmap="Spectral",
-    background="white",
-    width=800,
-    height=800,
-    show_legend=True,
+        points,
+        ax=None,
+        labels=None,
+        values=None,
+        cmap="Blues",
+        color_key=None,
+        color_key_cmap="Spectral",
+        background="white",
+        width=800,
+        height=800,
+        show_legend=True,
 ):
     """Use matplotlib to plot points"""
     point_size = 100.0 / np.sqrt(points.shape[0])
@@ -464,18 +470,18 @@ def show(plot_to_show):
 
 
 def points(
-    umap_object,
-    labels=None,
-    values=None,
-    theme=None,
-    cmap="Blues",
-    color_key=None,
-    color_key_cmap="Spectral",
-    background="white",
-    width=800,
-    height=800,
-    show_legend=True,
-    subset_points=None,
+        umap_object,
+        labels=None,
+        values=None,
+        theme=None,
+        cmap="Blues",
+        color_key=None,
+        color_key_cmap="Spectral",
+        background="white",
+        width=800,
+        height=800,
+        show_legend=True,
+        subset_points=None,
 ):
     """Plot an embedding as points. Currently this only works
     for 2D embeddings. While there are many optional parameters
@@ -679,19 +685,19 @@ def points(
 
 
 def connectivity(
-    umap_object,
-    edge_bundling=None,
-    edge_cmap="gray_r",
-    show_points=False,
-    labels=None,
-    values=None,
-    theme=None,
-    cmap="Blues",
-    color_key=None,
-    color_key_cmap="Spectral",
-    background="white",
-    width=800,
-    height=800,
+        umap_object,
+        edge_bundling=None,
+        edge_cmap="gray_r",
+        show_points=False,
+        labels=None,
+        values=None,
+        theme=None,
+        cmap="Blues",
+        color_key=None,
+        color_key_cmap="Spectral",
+        background="white",
+        width=800,
+        height=800,
 ):
     """Plot connectivity relationships of the underlying UMAP
     simplicial set data structure. Internally UMAP will make
@@ -905,16 +911,16 @@ def connectivity(
 
 
 def diagnostic(
-    umap_object,
-    diagnostic_type="pca",
-    nhood_size=15,
-    local_variance_threshold=0.8,
-    ax=None,
-    cmap="viridis",
-    point_size=None,
-    background="white",
-    width=800,
-    height=800,
+        umap_object,
+        diagnostic_type="pca",
+        nhood_size=15,
+        local_variance_threshold=0.8,
+        ax=None,
+        cmap="viridis",
+        point_size=None,
+        background="white",
+        width=800,
+        height=800,
 ):
     """Provide a diagnostic plot or plots for a UMAP embedding.
     There are a number of plots that can be helpful for diagnostic
@@ -1151,7 +1157,7 @@ def diagnostic(
 
         fig, axs = plt.subplots(rows, cols, figsize=(10, 10), constrained_layout=True)
         axs = axs.flat
-        for ax in axs[len(_diagnostic_types) :]:
+        for ax in axs[len(_diagnostic_types):]:
             ax.remove()
         for ax, plt_type in zip(axs, _diagnostic_types):
             diagnostic(
@@ -1172,22 +1178,23 @@ def diagnostic(
 
 
 def interactive(
-    umap_object,
-    labels=None,
-    values=None,
-    hover_data=None,
-    theme=None,
-    cmap="Blues",
-    color_key=None,
-    color_key_cmap="Spectral",
-    background="white",
-    width=800,
-    height=800,
-    point_size=None,
-    subset_points=None,
-    interactive_text_search=False,
-    interactive_text_search_columns=None,
-    interactive_text_search_alpha_contrast=0.95,
+        umap_object,
+        labels=None,
+        values=None,
+        hover_data=None,
+        theme=None,
+        cmap="Blues",
+        color_key=None,
+        color_key_cmap="Spectral",
+        background="white",
+        width=800,
+        height=800,
+        point_size=None,
+        subset_points=None,
+        interactive_text_search=False,
+        interactive_text_search_columns=None,
+        interactive_text_search_alpha_contrast=0.95,
+        show_neighbours_on_click=False
 ):
     """Create an interactive bokeh plot of a UMAP embedding.
     While static plots are useful, sometimes a plot that
@@ -1304,6 +1311,9 @@ def interactive(
         Alpha value for points matching text search. Alpha value for points
         not matching text search will be 1 - interactive_text_search_alpha_contrast
 
+    show_neighbours_on_click: bool (optional, default False)
+        Whether to display neighbour graph connectivity edges
+
     Returns
     -------
 
@@ -1394,10 +1404,14 @@ def interactive(
         plot = bpl.figure(
             width=width,
             height=height,
-            tooltips=tooltips,
-            background_fill_color=background,
+            background_fill_color=background)
+
+        plot.add_tools(
+            HoverTool(names=['points'], tooltips=tooltips)
         )
-        plot.circle(
+
+        cr = plot.circle(
+            name='points',
             x="x",
             y="y",
             source=data_source,
@@ -1408,6 +1422,62 @@ def interactive(
 
         plot.grid.visible = False
         plot.axis.visible = False
+
+        if show_neighbours_on_click:
+            if hasattr(umap_object, '_d_mat'):
+                neighbor_graph = umap_object._rp_forest.neighbor_graph
+            else:
+                knn_indices = fast_knn_indices(umap_object._dmat, umap_object.n_neighbors)
+                knn_dists = umap_object._dmat[np.arange(umap_object._dmat.shape[0])[:, None], knn_indices].copy()
+                knn_dists = knn_dists/np.max(knn_dists)
+                neighbor_graph = [knn_indices, knn_dists]
+
+            links = {'target': {i: list(neighbor_graph[0][i, :]) for i in range(neighbor_graph[0].shape[0])},
+                     'weight': {i: list(1 - neighbor_graph[1][i, :]) for i in range(neighbor_graph[0].shape[0])}}
+
+            source = ColumnDataSource({'x0': [], 'y0': [], 'x1': [], 'y1': [], 'alpha': []})
+            sr = plot.segment(name='high_d_neighbours',
+                              x0='x0',
+                              y0='y0',
+                              x1='x1',
+                              y1='y1',
+                              color='red',
+                              alpha='alpha',
+                              line_width=3,
+                              source=source)
+
+            # sets the link data for a clicked circle
+            code = """
+            const links = %s
+            const data = {'x0': [], 'y0': [], 'x1': [], 'y1': [], 'alpha':[]}
+            const indices = cb_data.source.selected.indices;
+
+            for (var i = 0; i < indices.length; i++) {
+                const start = indices[i]
+                for (var j = 0; j < links['target'][start].length; j++) {
+                    const end = links['target'][start][j]
+                    data['x0'].push(circle.data.x[start])
+                    data['y0'].push(circle.data.y[start])
+                    data['x1'].push(circle.data.x[end])
+                    data['y1'].push(circle.data.y[end])
+                    data['alpha'].push(links['weight'][start][j])
+                }
+            }
+
+            segment.data = data
+            """ % links
+
+            callback = CustomJS(args={'circle': cr.data_source, 'segment': sr.data_source}, code=code)
+            plot.add_tools(
+                TapTool(callback=callback, renderers=[cr])
+            )
+
+            clear_lines_button = Button(label="Clear Neighbour Edges", button_type="primary")
+            clear_lines = CustomJS(args={'circle': cr.data_source, 'segment': sr.data_source}, code="""
+                        const data = {'x0': [], 'y0': [], 'x1': [], 'y1': [], 'alpha':[]}
+                        segment.data = data
+                        """)
+            clear_lines_button.js_on_event(events.ButtonClick, clear_lines)  # Button click
 
         if interactive_text_search:
             text_input = TextInput(value="", title="Search:")
@@ -1464,8 +1534,14 @@ def interactive(
 
                 text_input.js_on_change("value", callback)
 
+        # Add Bokeh inputs to output container if interactive_text_search or show_neighbours_on_click are True
+        if interactive_text_search:
+            if show_neighbours_on_click:
+                plot = column(text_input, clear_lines_button, plot)
+            else:
                 plot = column(text_input, plot)
-
+        elif show_neighbours_on_click:
+            plot = column(clear_lines_button, plot)
         # bpl.show(plot)
     else:
         if hover_data is not None:
@@ -1475,7 +1551,11 @@ def interactive(
             )
         if interactive_text_search:
             warn(
-                "Too many points for text search." "Sorry; try subssampling your data."
+                "Too many points for text search. Sorry; try subssampling your data."
+            )
+        if show_neighbours_on_click:
+            warn(
+                "Too many points for neighbour graph edge drawing. Sorry; try subssampling your data."
             )
         hv.extension("bokeh")
         hv.output(size=300)

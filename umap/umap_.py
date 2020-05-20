@@ -1378,6 +1378,7 @@ class UMAP(BaseEstimator):
         force_approximation_algorithm=False,
         verbose=False,
         unique=False,
+        _dmat=None
     ):
         self.n_neighbors = n_neighbors
         self.metric = metric
@@ -1411,6 +1412,8 @@ class UMAP(BaseEstimator):
 
         self.a = a
         self.b = b
+
+        self._dmat = _dmat
 
     def _validate_parameters(self):
         if self.set_op_mix_ratio < 0.0 or self.set_op_mix_ratio > 1.0:
@@ -1758,6 +1761,7 @@ class UMAP(BaseEstimator):
                         metric=self._input_distance_func,
                         kwds=self._metric_kwds,
                     )
+            self._dmat = dmat
             self.graph_, self._sigmas, self._rhos = fuzzy_simplicial_set(
                 dmat,
                 self._n_neighbors,
