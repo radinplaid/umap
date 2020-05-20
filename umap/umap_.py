@@ -1378,7 +1378,7 @@ class UMAP(BaseEstimator):
         force_approximation_algorithm=False,
         verbose=False,
         unique=False,
-        _dmat=None
+        _dmat=None,
     ):
         self.n_neighbors = n_neighbors
         self.metric = metric
